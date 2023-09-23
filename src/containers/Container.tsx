@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-function Container() {
+export default function Container() {
   const [count, setCount] = useState(0);
 
   return (
@@ -20,5 +20,3 @@ function Container() {
     </>
   );
 }
-
-export default Container;

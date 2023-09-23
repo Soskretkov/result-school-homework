@@ -1,10 +1,8 @@
 import React from 'react';
 import Container from './containers/Container';
 
-function App() {
+export default function App() {
   return (
     <Container />
   );
 }
-
-export default App;
