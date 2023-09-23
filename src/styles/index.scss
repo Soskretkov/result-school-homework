@@ -4,11 +4,14 @@
 * {
   margin: 0px;
   padding: 0px;
-  box-sizing: border-box;
 }
 
-body {
+html {
   font-family: 'Roboto', sans-serif;
   font-size: 12px;
-  background-color: aquamarine;
+  height: 100%;
+}
+
+body, #root {
+  height: 100%;
 }

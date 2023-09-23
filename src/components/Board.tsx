@@ -39,7 +39,7 @@ export function Board({ board, onCellClick }: BoardProps) {
 
 function Cell({ cellValue, onClick }: CellProps) {
   return (
-    <button className={styles.cell} onClick={onClick}>
+    <button className={styles['row__cell']} onClick={onClick}>
       {cellValue}
     </button>
   )
