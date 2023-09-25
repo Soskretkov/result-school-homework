@@ -2,23 +2,22 @@ import React from 'react';
 import styles from './Board.module.scss';
 
 
-type CellValue = 'X' | 'O' | null;
-export type CellMatrix = Array<Array<CellValue>>;
+type ValidValue = string | number | null;
 
 
 type CellProps = {
-  cellValue: CellValue;
+  cellValue: ValidValue;
   onClick: () => void;
 }
 
 
 type BoardProps = {
-  board: CellMatrix;
+  board: Array<Array<ValidValue>>;
   onCellClick: (_uintX: number, _uintY: number) => void;
 }
 
 
-export function Board({ board, onCellClick }: BoardProps) {
+export default function Board({ board, onCellClick }: BoardProps) {
   return (
     <div className={styles.board}>
       {
@@ -26,7 +25,7 @@ export function Board({ board, onCellClick }: BoardProps) {
           <div key={uintY} className={styles.row}>
             {
               row.map((cell, uintX) => (
-                <Cell key={uintX} cellValue={cell} onClick={() => onCellClick(uintX, uintY)}/>
+                <Cell key={uintX} cellValue={cell} onClick={() => onCellClick(uintX, uintY)} />
               ))
             }
           </div>
