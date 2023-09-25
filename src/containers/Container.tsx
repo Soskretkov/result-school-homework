@@ -16,12 +16,12 @@ export default function Container(): React.JSX.Element {
 
   const [strPlayerSymbol, setPlayerSymbol] = useState(playerManager.togglePlayerAndGetName());
   const [gameStatus, setGameStatus] = useState<GameStatus>('ongoing');
-  const [cellMatrixValues, setCellMatrixValues] = useState(ticTacToeBoard.board);
+  const [, setCellMatrixValues] = useState(ticTacToeBoard.board);
 
 
   function cellClickHandler(uintX: number, uintY: number): void {
     // не требуются изменения если игра завершена или произошел клик в ячейку, где значение уже есть
-    if (!gameStatus || cellMatrixValues[uintY][uintX] !== null) {
+    if (!gameStatus || ticTacToeBoard.board[uintY][uintX] !== null) {
       return;
     }
 
@@ -65,7 +65,7 @@ export default function Container(): React.JSX.Element {
     <div className={styles.container}>
       <RestartButton onButtonClick={resetGame} />
       <GameInfo playerName={strPlayerSymbol} gameStatus={gameStatus} />
-      <Board board={cellMatrixValues} onCellClick={cellClickHandler} />
+      <Board board={ticTacToeBoard.board} onCellClick={cellClickHandler} />
     </div>
   );
 }
