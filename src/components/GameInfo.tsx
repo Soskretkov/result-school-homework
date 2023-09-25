@@ -1,16 +1,18 @@
 import React from 'react';
 import styles from './GameInfo.module.scss';
 
-type GameInfoProps = { playerName: string, isGameActive: boolean };
+export type GameStatus = 'win' | 'draw' | 'ongoing';
+type GameInfoProps = { playerName: string, gameStatus: GameStatus };
 
-export default function GameInfo({ playerName, isGameActive }: GameInfoProps) {
-  const strMsgPrefix = isGameActive ? 'очередь ходить: ' : 'победу одержал: ';
-  const strClassName = isGameActive ? '' : styles['gameInfo--win'];
+export default function GameInfo({ playerName, gameStatus }: GameInfoProps) {
+  const strGameStatus = gameStatus === 'draw' ? 'ничья' :
+    (gameStatus === 'ongoing' ? 'очередь ходить: ' : 'победу одержал: ') + playerName;
 
+  const strClassName = gameStatus === 'ongoing' ? '' : styles['gameInfo--endGame'];
 
   return (
     <div className={`${styles.gameInfo} ${strClassName}`}>
-      {strMsgPrefix + playerName}
+      {strGameStatus}
     </div>
   )
 }
