@@ -15,6 +15,21 @@
     }
 
     button {
+        &:focus {
+            outline: 2px solid green;
+        }
+
+        &--active {
+            background-color: green;
+            color: white;
+        }
+
+        &--inactive {
+            background-color: grey;
+            color: darkgrey;
+            cursor: not-allowed;
+        }
+
         &:hover {
             cursor: pointer;
         }
