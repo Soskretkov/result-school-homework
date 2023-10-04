@@ -1,9 +1,8 @@
 import React from 'react';
-import Container from './containers/Container';
+import Home from './pages/Home';
 
 export default function App() {
-
   return (
-    <Container />
+    <Home />
   );
 }

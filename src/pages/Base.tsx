@@ -1,13 +1,11 @@
-import React, { useState, useRef } from 'react';
-import styles from './Form.module.scss';
-
-
-// Этот модуль имеет экспериментальный характер.
-// хотелось определить тип и его методы в одном объекте и доказать жизнеспособность такого подхода.
-// В отличие от хуков, которые не могут напрямую определять типы пропсов,
-// и требуют использование дополнительного внешнего типа, с нарушением консистентности,
-// класс FormData может предложить элегантное решение этой проблемы:
+// Этот модуль имеет экспериментальный код - не использует хуки, роль useState пересмотрена.
+// цель - определить тип и методы в одном объекте и передавать его как пропс, например:
 // function Form({ formData }: { formData: FormData }) {}
+// класс хранит данные, useState освобождается от этой миссии и нужен только для рендеринга
+
+// eslint-disable-next-line
+import React, { useState, useRef } from 'react';
+import styles from './Base.module.scss';
 
 
 export default function CreateForm() {
@@ -19,13 +17,13 @@ export default function CreateForm() {
 
 
 function Form({ formData }: { formData: FormData }) {
-  const formDataRef = useRef(formData).current;
+  const formDataRef = React.useRef(formData).current;
 
   // определение ref для кнопки отправки
-  const submitButtonRef = useRef<HTMLButtonElement | null>(null);
+  const submitButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
   // useState интересен только как способ рендерить
-  const [, forceRender] = useState({});
+  const [, forceRender] = React.useState({});
 
 
   function onChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -57,7 +55,7 @@ function Form({ formData }: { formData: FormData }) {
   const buttonStyle = formDataRef.isValid() ? styles['button--activeButton'] : styles['button--inactiveButton'];
 
   return (
-    <form className={styles.form} onSubmit={onSubmit}>
+    <form className={styles.base} onSubmit={onSubmit}>
       <input name="email"
         type="email"
         placeholder="Почта"
