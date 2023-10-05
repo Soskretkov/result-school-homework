@@ -1,10 +1,15 @@
-// Этот модуль имеет экспериментальный код - не использует хуки, роль useState пересмотрена.
-// цель - определить тип и методы в одном объекте и передавать его как пропс, например:
+// в этом модуле экспериментальный код - использую класс вместо можества useState
+// в прод я бы так не писал)
+// в этом коде useState вообще создается только один раз для возможности рендеринга
+// возможность useState хранить состояние намеренно не используется.
+// Цель1 - посмотреть улучшит ли это код, в частности React-код злоупотребляет замыканиями
+// Цель2 - сделать из класса структуру из rust, которая содержит в себе и тип и его методы
+// в одном объекте и попробовать нотировать этим типом напрямую, как я это сделал тут:
 // function Form({ formData }: { formData: FormData }) {}
-// класс хранит данные, useState освобождается от этой миссии и нужен только для рендеринга
+
 
 // eslint-disable-next-line
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styles from './Base.module.scss';
 
 
@@ -17,45 +22,33 @@ export default function CreateForm() {
 
 
 function Form({ formData }: { formData: FormData }) {
+  // определение ref для переданного экземпляра класса
   const formDataRef = React.useRef(formData).current;
 
   // определение ref для кнопки отправки
   const submitButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
-  // useState интересен только как способ рендерить
-  const [, forceRender] = React.useState({});
+  // класс имеет метод, который подскажет валиден ли ввод
+  const isValidFormData = formDataRef.isValid();
 
-
-  function onChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value } = event.target;
-
-    formDataRef
-      .setField(name, value)
-      .validate();
-
-    if (formDataRef.isValid()) {
-      // перемещение фокуса на кнопку
+  // фокус на кнопке с disabled=true не закрепляется, важно ставить
+  // его после построения DOM, когда у disabled уже имеется false
+  React.useEffect(() => {
+    if (isValidFormData) {
       submitButtonRef.current && submitButtonRef.current.focus();
     }
+  }, [isValidFormData]);
 
-    // перерендерит компонент
-    forceRender({});
-  }
+  // стиль кнопки 
+  const strButtonStyle = isValidFormData ? styles['button--active'] : styles['button--inactive'];
 
+  // один на весь код useState, который интересен только как способ рендерить
+  const [, forceRender] = React.useState({});
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!formDataRef.isValid()) {
-      return; // прервать отправку формы, если она невалидна
-    }
-    formDataRef.sendFormData();
-  }
-
-  // стиль для "неактивной" кнопки (disabled прямо в теге не рабочая идея - из-за него слетит фокус)
-  const buttonStyle = formDataRef.isValid() ? styles['button--activeButton'] : styles['button--inactiveButton'];
+  const onChange = CreateOnChangeHandler(formDataRef, forceRender);
 
   return (
-    <form className={styles.base} onSubmit={onSubmit}>
+    <form className={styles.base} onSubmit={onSubmit(formDataRef)}>
       <input name="email"
         type="email"
         placeholder="Почта"
@@ -75,10 +68,39 @@ function Form({ formData }: { formData: FormData }) {
         onChange={onChange}
       />
       <div className={styles.error}>{formDataRef.errors.confirmPassword}</div>
-      <button ref={submitButtonRef} className={buttonStyle} type="submit">Зарегистрироваться</button>
+      <button ref={submitButtonRef} disabled={!isValidFormData} className={strButtonStyle} type="submit">Зарегистрироваться</button>
 
     </form>
   )
+}
+
+
+function CreateOnChangeHandler(
+  formDataInstance: FormData,
+  render: (_: object) => void) {
+
+  return (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name: strName, value: strValue } = event.target;
+
+    formDataInstance
+      .setField(strName, strValue)
+      .validate();
+
+    // перерендерит компонент
+    render({});
+  }
+}
+
+
+function onSubmit(formDataInstance: FormData) {
+  return (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formDataInstance.isValid()) {
+      return; // прервать отправку формы, если она невалидна
+    }
+
+    console.log(formDataInstance.values);
+  };
 }
 
 
@@ -92,12 +114,14 @@ class FormData {
   errors: typeof FormData.prototype.values;
 
   constructor(prop: Partial<typeof FormData.prototype.values> = {}) {
-    // спредоператор мог бы притащить email:undefined, TS это не нравится, потому .assign
+    // спред-оператор мог бы притащить email:undefined, TS это не нравится, поэтому Object.assign
     this.values = Object.assign(this.values, prop);
     this.errors = this.#createInitialErrors(Object.keys(this.values));
   }
 
-  // метод гибкого создания начальной структуры ошибок, который следует за initialValues
+  // метод создает объект хранения ошибок, идентичный по ключам с this.values,
+  // автоматическая генерация объекта удобна тем, что позволяет не думать о хранении
+  // ошибок, когда в код вносятся именение и пересматриваются поля у this.values
   #createInitialErrors(keys: string[]): typeof FormData.prototype.values {
     const errors: { [key: string]: string } = {};
     keys.forEach(key => {
@@ -108,7 +132,7 @@ class FormData {
 
   setField = (fieldName: keyof typeof FormData.prototype.values, newValue: string): this => {
     this.values[fieldName] = newValue;
-    return this;  // возвращаем this для возможности создания цепочек вызовов
+    return this;  // возвращает this для возможности создания цепочек вызовов
   };
 
   isValid = (): boolean => {
@@ -138,8 +162,8 @@ class FormData {
       strNewEmailErr = 'Неверный формат email';
     }
 
-    if (this.values.password.length <= 4) {
-      strNewPasswordErr = 'Пароль должен содержать более 4 символов';
+    if (this.values.password.length <= 1) {
+      strNewPasswordErr = 'Пароль должен содержать более 2 символов';
     }
 
     if (this.values.confirmPassword) {
@@ -154,11 +178,6 @@ class FormData {
       confirmPassword: strNewConfirmPasswordErr,
     });
 
-    return this;  // возвращаем this для возможности создания цепочек вызовов
+    return this;  // возвращает this для возможности создания цепочек вызовов
   }
-
-
-  sendFormData = () => {
-    console.log(this.values);
-  };
 }
