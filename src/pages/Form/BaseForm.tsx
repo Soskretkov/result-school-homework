@@ -1,81 +1,37 @@
-// в этом модуле экспериментальный код - использую класс вместо можества useState
-// в прод я бы так не писал)
-// в этом коде useState вообще создается только один раз для возможности рендеринга
-// возможность useState хранить состояние намеренно не используется.
-// Цель1 - посмотреть улучшит ли это код, в частности React-код злоупотребляет замыканиями
-// Цель2 - сделать из класса структуру из rust, которая содержит в себе и тип и его методы
-// в одном объекте и попробовать нотировать этим типом напрямую, как я это сделал тут:
-// function Form({ formData }: { formData: FormData }) {}
+// в этом модуле экспериментальный код, чтобы подтвердить некоторые гипотезы
+// гипотеза#: класс + useRef создает альтернативу множеству useState
+// Мотивация#1 хотелось вундервафлю
+// Мотивация#2: если гипотеза верна, можно обходиться одним useState и
+// нужно изыскать альтернативный кодинг, без характерных для React замыканий 
+// Мотивация#3 - сделать из класса структуру языка rust, которая содержит в себе и тип и
+// методы в одном объекте и попробовать нотировать этим типом напрямую, типо как тут:
+// function onSubmit(formDataInstance: FormData) {
 
+import React, { useState, useRef } from 'react';
+import Form from '../../components/Form';
+import { FormFields } from '../../shared/types';
 
-// eslint-disable-next-line
-import React, { useState, useRef, useEffect } from 'react';
-import styles from './Base.module.scss';
-
-
-export default function CreateForm() {
-  const formData = new FormData();
-  return (
-    <Form formData={formData} />
-  );
-}
-
-
-function Form({ formData }: { formData: FormData }) {
-  // определение ref для переданного экземпляра класса
-  const formDataRef = React.useRef(formData).current;
-
-  // определение ref для кнопки отправки
-  const submitButtonRef = React.useRef<HTMLButtonElement | null>(null);
-
-  // класс имеет метод, который подскажет валиден ли ввод
-  const isValidFormData = formDataRef.isValid();
-
-  // фокус на кнопке с disabled=true не закрепляется, важно ставить
-  // его после построения DOM, когда у disabled уже имеется false
-  React.useEffect(() => {
-    if (isValidFormData) {
-      submitButtonRef.current && submitButtonRef.current.focus();
-    }
-  }, [isValidFormData]);
-
-  // стиль кнопки 
-  const strButtonStyle = isValidFormData ? styles['button--active'] : styles['button--inactive'];
+export default function BaseForm() {
+  // создание экземпляра класса и ref для него, чтобы он сохранялся между рендерингами
+  const formDataRef = React.useRef(new FormData()).current;
 
   // один на весь код useState, который интересен только как способ рендерить
   const [, forceRender] = React.useState({});
 
-  const onChange = CreateOnChangeHandler(formDataRef, forceRender);
+  const fieldHandler = CreateFieldHandler(formDataRef, forceRender);
 
   return (
-    <form className={styles.base} onSubmit={onSubmit(formDataRef)}>
-      <input name="email"
-        type="email"
-        placeholder="Почта"
-        // валидация поля email намеренно происходит только при потере фокуса
-        onBlur={onChange}
-      />
-      <div className={styles.error}>{formDataRef.errors.email}</div>
-      <input name="password"
-        type="password"
-        placeholder="Пароль"
-        onChange={onChange}
-      />
-      <div className={styles.error}>{formDataRef.errors.password}</div>
-      <input name="confirmPassword"
-        type="password"
-        placeholder="Повторите пароль"
-        onChange={onChange}
-      />
-      <div className={styles.error}>{formDataRef.errors.confirmPassword}</div>
-      <button ref={submitButtonRef} disabled={!isValidFormData} className={strButtonStyle} type="submit">Зарегистрироваться</button>
-
-    </form>
+    <Form
+      errors={formDataRef.errors}
+      fieldHandler={fieldHandler}
+      onSubmit={()=>onSubmit(formDataRef)}
+      isValidForm ={formDataRef.isValid()}
+    />
   )
 }
 
 
-function CreateOnChangeHandler(
+function CreateFieldHandler(
   formDataInstance: FormData,
   render: (_: object) => void) {
 
@@ -86,7 +42,7 @@ function CreateOnChangeHandler(
       .setField(strName, strValue)
       .validate();
 
-    // перерендерит компонент
+    // рендерить компонент, не имеет значения что передать в качестве аргумента
     render({});
   }
 }
@@ -105,7 +61,7 @@ function onSubmit(formDataInstance: FormData) {
 
 
 class FormData {
-  values: { [key: string]: string } = {
+  values: FormFields = {
     email: '',
     password: '',
     confirmPassword: '',
@@ -150,6 +106,7 @@ class FormData {
     return true;  // ошибок не найдено, возвращаем true
   };
 
+  // валидацию надо вынести отдельно, но пока класс не переиспользуется это допустимо
   validate = (): this => {
     const emailText = this.values.email;
     let strNewEmailErr = '';
