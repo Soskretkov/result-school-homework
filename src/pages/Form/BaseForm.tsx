@@ -1,8 +1,8 @@
-// в этом модуле экспериментальный код, чтобы подтвердить некоторые гипотезы
-// идея#: через класс + useRef создает альтернативу множеству useState
+// в этом модуле экспериментальный код, чтобы посмотреть идею ниже
+// идея#: через класс + useRef можно создать альтернативу множеству useState
 // Мотивация#1 хотелось вундервафлю
-// Мотивация#2: если идея выше работает, можно обходиться одним useState и
-// попробовать альтернативный кодинг, без характерных для React замыканий
+// Мотивация#2: если идея выше, можно обходиться одним useState и
+// испопробовать альтернативный кодинг, без характерных для React замыканий
 // Мотивация#3 - сделать из класса структуру языка rust, которая содержит в себе и тип и
 // методы в одном объекте и попробовать нотировать этим типом напрямую, типо как тут:
 // function onSubmit(formDataInstance: FormData) {
@@ -10,7 +10,9 @@
 // eslint-disable-next-line
 import React, { useState, useRef } from 'react';
 import Form from '../../components/Form';
+import { UINT_MIN_PASSWORD_LEN, EMAIL_REG_EXP } from '../../shared/constants';
 import { FormFields } from '../../shared/types';
+import FormErrMsg from '../../shared/form-err-msg';
 
 export default function BaseForm() {
   // создание экземпляра класса и ref для него, чтобы он сохранялся между рендерингами
@@ -76,9 +78,7 @@ class FormData {
     this.errors = this.#createInitialErrors(Object.keys(this.values));
   }
 
-  // метод создает объект хранения ошибок, идентичный по ключам с this.values,
-  // автоматическая генерация объекта удобна тем, что позволяет не думать о хранении
-  // ошибок, когда в код вносятся именение и пересматриваются поля у this.values
+  // автоматическая генерация создает объект хранения ошибок, идентичный по ключам с this.values,  это удобно, когда в код вносятся именение и пересматриваются поля this.values
   #createInitialErrors(keys: string[]): typeof FormData.prototype.values {
     const errors: { [key: string]: string } = {};
     keys.forEach(key => {
@@ -107,41 +107,19 @@ class FormData {
     return true;  // ошибок не найдено, возвращаем true
   };
 
-  // по поводу валидации отдельно - без нее пропадет элегантный чейнинг
-  // как выход можно разместь тут компактную обертку над внешним валидатором
+  // касательно валидации отдельно от класса - тогда пропадет чейнинг, как выход можно разместить тут компактную обертку над внешним валидатором (не реализовано)
   validate = (): this => {
-    const UINT_MIN_PASSWORD_LEN = 2;
-    const strEmail = this.values.email;
-    const strPassword = this.values.password;
-    const uintPasswordLen = strPassword.length;
-    const strConfirmPassword = this.values.confirmPassword;
+    const uintPasswordLen = this.values.password.length;
 
-    // новый текст ошибки
-    let strNewEmailErr = '';
-    let strNewPasswordErr = '';
-    let strNewConfirmPasswordErr = '';
+    // проверка email. Минимальные требования: @ и один символ слева и справа
+    this.errors.email = EMAIL_REG_EXP.test(this.values.email) ? '' : FormErrMsg.EmailFormat();
 
-    // требования минимальны: @ и один символ слева и справа
-    const emailRegex = /^.+@.+$/;
-    if (!emailRegex.test(strEmail)) {
-      strNewEmailErr = 'Неверный формат email';
-    }
+    // проверка первого пароля
+    const isValidPassword = uintPasswordLen > 0 && uintPasswordLen <= UINT_MIN_PASSWORD_LEN;
+    this.errors.password = isValidPassword ? '' : FormErrMsg.PasswordMinLength(UINT_MIN_PASSWORD_LEN);
 
-    if (uintPasswordLen > 0 && uintPasswordLen <= UINT_MIN_PASSWORD_LEN) {
-      strNewPasswordErr = `Пароль должен содержать более ${UINT_MIN_PASSWORD_LEN} символов`;
-    }
-
-    if (strConfirmPassword) {
-      if (strPassword !== strConfirmPassword) {
-        strNewConfirmPasswordErr = 'Пароли не совпадают';
-      }
-    }
-
-    Object.assign(this.errors, {
-      email: strNewEmailErr,
-      password: strNewPasswordErr,
-      confirmPassword: strNewConfirmPasswordErr,
-    });
+    // проверка совпадения паролей
+    this.errors.password = (this.values.password === this.values.confirmPassword) ? '' : FormErrMsg.PasswordMismatch();
 
     return this;  // возвращает this для возможности чейнинга
   }
