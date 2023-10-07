@@ -5,62 +5,59 @@ import styles from './Form.module.scss';
 export type FormProps = {
   errors: FormFields,
   fieldHandler: (_: React.ChangeEvent<HTMLInputElement>) => void,
-  onSubmit: () => void,
+  onSubmit: (_: React.FormEvent<HTMLFormElement>) => void,
   isValidForm: boolean,
 }
 
-export default function Form(props: FormProps) {
-  const isValid = props.isValidForm;
+export default function Form({ errors, fieldHandler, onSubmit, isValidForm }: FormProps) {
+  // useRef ссылается на кнопку отправки
+  const submitButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
-  // стиль кнопки 
-  const strButtonStyle = isValid ? styles['button--active'] : styles['button--inactive'];
+  useButtonFocusWhenEnabled(submitButtonRef, isValidForm);
 
-  // вернет useRef который используется как ссылка на кнопку отправки
-  const submitButtonRef = useButtonFocus(isValid);
+  const strButtonStyle = isValidForm ? styles['button--active'] : styles['button--inactive'];
 
   return (
-    <form className={styles.form} onSubmit={props.onSubmit}>
+    <form className={styles.form} onSubmit={onSubmit}>
       <input name="email"
         type="email"
         placeholder="Почта"
-        // валидация поля email намеренно происходит только при потере фокуса
-        onBlur={props.fieldHandler}
+        // валидация поля email намеренно происходит при потере фокуса
+        onBlur={fieldHandler}
       />
-      <div className={styles.error}>{props.errors.email}</div>
+      <div className={styles.error}>{errors.email}</div>
       <input name="password"
         type="password"
         placeholder="Пароль"
-        onChange={props.fieldHandler}
+        onChange={fieldHandler}
       />
-      <div className={styles.error}>{props.errors.password}</div>
+      <div className={styles.error}>{errors.password}</div>
       <input name="confirmPassword"
         type="password"
         placeholder="Повторите пароль"
-        onChange={props.fieldHandler}
+        onChange={fieldHandler}
       />
-      <div className={styles.error}>{props.errors.confirmPassword}</div>
+      <div className={styles.error}>{errors.confirmPassword}</div>
       <button
         ref={submitButtonRef}
-        disabled={!isValid}
+        disabled={!isValidForm}
         className={strButtonStyle}
         type="submit">
         Зарегистрироваться
       </button>
     </form>
-  )
+  );
 }
 
 
-function useButtonFocus(isActive: boolean) {
-  const submitButtonRef = React.useRef<HTMLButtonElement | null>(null);
-
+function useButtonFocusWhenEnabled(
+  buttonRef: React.MutableRefObject<HTMLButtonElement | null>,
+  isActive: boolean) {
   // фокус на кнопке с disabled=true не закрепляется, важно ставить
   // его после построения DOM, когда у disabled уже имеется false
   useEffect(() => {
     if (isActive) {
-      submitButtonRef.current && submitButtonRef.current.focus();
+      buttonRef.current?.focus();
     }
   }, [isActive]);
-
-  return submitButtonRef;
 }

@@ -1,12 +1,13 @@
 // в этом модуле экспериментальный код, чтобы подтвердить некоторые гипотезы
-// гипотеза#: класс + useRef создает альтернативу множеству useState
+// идея#: через класс + useRef создает альтернативу множеству useState
 // Мотивация#1 хотелось вундервафлю
-// Мотивация#2: если гипотеза верна, можно обходиться одним useState и
-// нужно изыскать альтернативный кодинг, без характерных для React замыканий 
+// Мотивация#2: если идея выше работает, можно обходиться одним useState и
+// попробовать альтернативный кодинг, без характерных для React замыканий
 // Мотивация#3 - сделать из класса структуру языка rust, которая содержит в себе и тип и
 // методы в одном объекте и попробовать нотировать этим типом напрямую, типо как тут:
 // function onSubmit(formDataInstance: FormData) {
 
+// eslint-disable-next-line
 import React, { useState, useRef } from 'react';
 import Form from '../../components/Form';
 import { FormFields } from '../../shared/types';
@@ -24,10 +25,10 @@ export default function BaseForm() {
     <Form
       errors={formDataRef.errors}
       fieldHandler={fieldHandler}
-      onSubmit={()=>onSubmit(formDataRef)}
-      isValidForm ={formDataRef.isValid()}
+      onSubmit={onSubmit(formDataRef)}
+      isValidForm={formDataRef.isValid()}
     />
-  )
+  );
 }
 
 
@@ -88,7 +89,7 @@ class FormData {
 
   setField = (fieldName: keyof typeof FormData.prototype.values, newValue: string): this => {
     this.values[fieldName] = newValue;
-    return this;  // возвращает this для возможности создания цепочек вызовов
+    return this;  // возвращает this для возможности чейнинга
   };
 
   isValid = (): boolean => {
@@ -106,25 +107,32 @@ class FormData {
     return true;  // ошибок не найдено, возвращаем true
   };
 
-  // валидацию надо вынести отдельно, но пока класс не переиспользуется это допустимо
+  // по поводу валидации отдельно - без нее пропадет элегантный чейнинг
+  // как выход можно разместь тут компактную обертку над внешним валидатором
   validate = (): this => {
-    const emailText = this.values.email;
+    const UINT_MIN_PASSWORD_LEN = 2;
+    const strEmail = this.values.email;
+    const strPassword = this.values.password;
+    const uintPasswordLen = strPassword.length;
+    const strConfirmPassword = this.values.confirmPassword;
+
+    // новый текст ошибки
     let strNewEmailErr = '';
     let strNewPasswordErr = '';
     let strNewConfirmPasswordErr = '';
 
     // требования минимальны: @ и один символ слева и справа
     const emailRegex = /^.+@.+$/;
-    if (!emailRegex.test(emailText)) {
+    if (!emailRegex.test(strEmail)) {
       strNewEmailErr = 'Неверный формат email';
     }
 
-    if (this.values.password.length <= 1) {
-      strNewPasswordErr = 'Пароль должен содержать более 2 символов';
+    if (uintPasswordLen > 0 && uintPasswordLen <= UINT_MIN_PASSWORD_LEN) {
+      strNewPasswordErr = `Пароль должен содержать более ${UINT_MIN_PASSWORD_LEN} символов`;
     }
 
-    if (this.values.confirmPassword) {
-      if (this.values.password !== this.values.confirmPassword) {
+    if (strConfirmPassword) {
+      if (strPassword !== strConfirmPassword) {
         strNewConfirmPasswordErr = 'Пароли не совпадают';
       }
     }
@@ -135,6 +143,6 @@ class FormData {
       confirmPassword: strNewConfirmPasswordErr,
     });
 
-    return this;  // возвращает this для возможности создания цепочек вызовов
+    return this;  // возвращает this для возможности чейнинга
   }
 }

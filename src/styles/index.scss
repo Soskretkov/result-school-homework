@@ -9,10 +9,12 @@
 
 html {
   font-family: 'Roboto', sans-serif;
-  font-size: 12px;
-  height: 100%;
 }
 
-body, #root {
-  height: 100%;
+#root {
+  height: 100vh;
+  margin-top: 30vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
 }
