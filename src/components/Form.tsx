@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import SubmitButton from './Form/SubmitButton';
 import { FormFields } from '../shared/types';
 import styles from './Form.module.scss';
 
@@ -10,13 +11,6 @@ export type FormProps = {
 }
 
 export default function Form({ errors, fieldHandler, onSubmit, isValidForm }: FormProps) {
-  // useRef ссылается на кнопку отправки
-  const submitButtonRef = React.useRef<HTMLButtonElement | null>(null);
-
-  useButtonFocusWhenEnabled(submitButtonRef, isValidForm);
-
-  const strButtonStyle = isValidForm ? styles['button--active'] : styles['button--inactive'];
-
   return (
     <form className={styles.form} onSubmit={onSubmit}>
       <input name="email"
@@ -38,26 +32,7 @@ export default function Form({ errors, fieldHandler, onSubmit, isValidForm }: Fo
         onChange={fieldHandler}
       />
       <div className={styles.error}>{errors.confirmPassword}</div>
-      <button
-        ref={submitButtonRef}
-        disabled={!isValidForm}
-        className={strButtonStyle}
-        type="submit">
-        Зарегистрироваться
-      </button>
+      <SubmitButton isValidForm={isValidForm} />
     </form>
   );
-}
-
-
-function useButtonFocusWhenEnabled(
-  buttonRef: React.MutableRefObject<HTMLButtonElement | null>,
-  isActive: boolean) {
-  // фокус на кнопке с disabled=true не закрепляется, важно ставить
-  // его после построения DOM, когда у disabled уже имеется false
-  useEffect(() => {
-    if (isActive) {
-      buttonRef.current?.focus();
-    }
-  }, [isActive]);
 }

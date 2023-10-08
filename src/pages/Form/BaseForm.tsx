@@ -1,21 +1,16 @@
-// в этом модуле экспериментальный код, чтобы посмотреть идею ниже
-// идея#: через класс + useRef можно создать альтернативу множеству useState
-// Мотивация#1 хотелось вундервафлю
-// Мотивация#2: если идея выше, можно обходиться одним useState и
-// испопробовать альтернативный кодинг, без характерных для React замыканий
-// Мотивация#3 - сделать из класса структуру языка rust, которая содержит в себе и тип и
-// методы в одном объекте и попробовать нотировать этим типом напрямую, типо как тут:
-// function onSubmit(formDataInstance: FormData) {
-
-// eslint-disable-next-line
+// в этом модуле экспериментальный код, чтобы посмотреть как через класс + useRef
+// можно создать альтернативу множеству useState.
+// Мотивация: обходиться одним useState и испопробовать альтернативный кодинг,
+// без характерных для React замыканий.
 import React, { useState, useRef } from 'react';
 import Form from '../../components/Form';
 import { UINT_MIN_PASSWORD_LEN, EMAIL_REG_EXP } from '../../shared/constants';
 import { FormFields } from '../../shared/types';
-import FormErrMsg from '../../shared/form-err-msg';
+import { formErrMsg, sendFormData } from '../../shared/form-utils';
+
 
 export default function BaseForm() {
-  // создание экземпляра класса и ref для него, чтобы он сохранялся между рендерингами
+  // создание экземпляра класса и ref чтобы сохранялся между рендерингами
   const formDataRef = React.useRef(new FormData()).current;
 
   // один на весь код useState, который интересен только как способ рендерить
@@ -34,18 +29,13 @@ export default function BaseForm() {
 }
 
 
-function CreateFieldHandler(
-  formDataInstance: FormData,
-  render: (_: object) => void) {
-
+function CreateFieldHandler(formDataInstance: FormData, render: (_: object) => void) {
   return (event: React.ChangeEvent<HTMLInputElement>) => {
+    // ввод пользователя передается в экземпляр класса FormData
     const { name: strName, value: strValue } = event.target;
+    formDataInstance.setField(strName, strValue);
 
-    formDataInstance
-      .setField(strName, strValue)
-      .validate();
-
-    // рендерить компонент, не имеет значения что передать в качестве аргумента
+    // рендерить компонент, аргумент значения не имеет
     render({});
   }
 }
@@ -54,11 +44,7 @@ function CreateFieldHandler(
 function onSubmit(formDataInstance: FormData) {
   return (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formDataInstance.isValid()) {
-      return; // прервать отправку формы, если она невалидна
-    }
-
-    console.log(formDataInstance.values);
+    sendFormData(formDataInstance.values);
   };
 }
 
@@ -78,7 +64,8 @@ class FormData {
     this.errors = this.#createInitialErrors(Object.keys(this.values));
   }
 
-  // автоматическая генерация создает объект хранения ошибок, идентичный по ключам с this.values,  это удобно, когда в код вносятся именение и пересматриваются поля this.values
+  // автоматическая генерация создает объект хранения ошибок, идентичный по ключам с this.values,
+  // это удобно, когда в код вносятся именение и пересматриваются поля this.values
   #createInitialErrors(keys: string[]): typeof FormData.prototype.values {
     const errors: { [key: string]: string } = {};
     keys.forEach(key => {
@@ -87,9 +74,9 @@ class FormData {
     return errors as typeof FormData.prototype.values;
   }
 
-  setField = (fieldName: keyof typeof FormData.prototype.values, newValue: string): this => {
+  setField = (fieldName: keyof typeof FormData.prototype.values, newValue: string): void => {
     this.values[fieldName] = newValue;
-    return this;  // возвращает this для возможности чейнинга
+    this.validate();
   };
 
   isValid = (): boolean => {
@@ -107,20 +94,20 @@ class FormData {
     return true;  // ошибок не найдено, возвращаем true
   };
 
-  // касательно валидации отдельно от класса - тогда пропадет чейнинг, как выход можно разместить тут компактную обертку над внешним валидатором (не реализовано)
-  validate = (): this => {
-    const uintPasswordLen = this.values.password.length;
+  validate = (): void => {
+    const values = this.values;
+    const errors = this.errors;
 
     // проверка email. Минимальные требования: @ и один символ слева и справа
-    this.errors.email = EMAIL_REG_EXP.test(this.values.email) ? '' : FormErrMsg.EmailFormat();
+    errors.email = EMAIL_REG_EXP.test(values.email) ? '' : formErrMsg.EmailFormat();
 
     // проверка первого пароля
-    const isValidPassword = uintPasswordLen > 0 && uintPasswordLen <= UINT_MIN_PASSWORD_LEN;
-    this.errors.password = isValidPassword ? '' : FormErrMsg.PasswordMinLength(UINT_MIN_PASSWORD_LEN);
+    const uintPasswordLen = values.password.length;
+    const isValidPassword = (uintPasswordLen == 0) || (uintPasswordLen >= UINT_MIN_PASSWORD_LEN);
+    errors.password = isValidPassword ? '' : formErrMsg.PasswordMinLength(UINT_MIN_PASSWORD_LEN);
 
     // проверка совпадения паролей
-    this.errors.password = (this.values.password === this.values.confirmPassword) ? '' : FormErrMsg.PasswordMismatch();
-
-    return this;  // возвращает this для возможности чейнинга
+    const isСonfirmed = (!values.confirmPassword) || (values.password === values.confirmPassword);
+    errors.confirmPassword = isСonfirmed ? '' : formErrMsg.PasswordMismatch();
   }
 }

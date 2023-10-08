@@ -1,0 +1,21 @@
+.button {
+    &:focus {
+        outline: 2px solid red;
+    }
+
+    &:hover {
+        cursor: pointer;
+    }
+
+
+    &--active {
+        background-color: green;
+        color: white;
+    }
+
+    &--inactive {
+        background-color: grey;
+        color: darkgrey;
+        cursor: not-allowed;
+    }
+}

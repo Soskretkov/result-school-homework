@@ -14,27 +14,6 @@
         }
     }
 
-    button {
-        &:focus {
-            outline: 2px solid red;
-        }
-
-        &:hover {
-            cursor: pointer;
-        }
-    }
-
-    button.button--active {
-        background-color: green;
-        color: white;
-    }
-
-    button.button--inactive {
-        background-color: grey;
-        color: darkgrey;
-        cursor: not-allowed;
-    }
-
     .error {
         color: red;
     }
